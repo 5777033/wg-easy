@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== 🛠 WG-EASY 一键部署脚本 (修复版) ==="
+echo "=== 🛠 WG-EASY 一键部署脚本 (最终优化版) ==="
 
 # 当前目录
 DEPLOY_DIR=$(pwd)
@@ -19,23 +19,30 @@ WG_PORT=${WG_PORT:-7001}
 read -rsp "请输入Web UI登录密码: " PASSWORD
 echo
 
-# 2️⃣ 生成密码哈希并处理 $ 转义
+# 2️⃣ 生成密码哈希并处理转义符
 echo "==> 生成密码哈希..."
 PASSWORD_HASH=$(docker run --rm ghcr.io/wg-easy/wg-easy sh -c \
   "node -e \"console.log(require('bcryptjs').hashSync('$PASSWORD', 12))\"")
 PASSWORD_HASH_ESCAPED=$(echo "$PASSWORD_HASH" | sed 's/\$/\$\$/g')
 
+# 3️⃣ 设置内核参数（避免 sysctl 报错）
+echo "==> 配置系统内核参数..."
+sudo sysctl -w net.ipv4.conf.all.src_valid_mark=1
+sudo sysctl -w net.ipv4.ip_forward=1
+
+echo
 echo "部署目录: $DEPLOY_DIR"
 echo "数据目录: $DATA_DIR"
 echo "公网IP: $WG_HOST"
 echo "DNS: $WG_DNS"
 echo "Web UI端口: $UI_PORT"
 echo "WireGuard端口: $WG_PORT"
+echo
 
-# 3️⃣ 创建数据目录
+# 4️⃣ 创建数据目录
 mkdir -p "$DATA_DIR"
 
-# 4️⃣ 写入 docker-compose.yml
+# 5️⃣ 写入 docker-compose.yml
 cat > "$COMPOSE_FILE" <<EOF
 version: '3.8'
 services:
@@ -72,28 +79,14 @@ services:
     restart: unless-stopped
 EOF
 
-# 5️⃣ 启动服务
+# 6️⃣ 启动服务
 echo "==> 启动服务中..."
 docker compose up -d
 
 echo
+echo "=========================================="
 echo "✅ WG-EASY 部署完成"
-echo "🔗 访问地址: http://$WG_HOST:$UI_PORT"
+echo "🔗 Web 管理面板: http://$WG_HOST:$UI_PORT"
 echo "🔑 登录密码: $PASSWORD"
-echo
-echo "📌 提示："
-echo "1. 如果报错 sysctl 权限，请尝试在宿主机执行:"
-echo "   sudo sysctl -w net.ipv4.conf.all.src_valid_mark=1"
-echo "   sudo sysctl -w net.ipv4.ip_forward=1"
-echo
-echo "2. 客户端配置文件将在首次创建客户端后出现在 $DATA_DIR"
-
-echo
+echo "📂 配置文件目录: $DATA_DIR"
 echo "=========================================="
-echo "✅ wg-easy 已部署成功！"
-echo "部署目录: $DEPLOY_DIR"
-echo "Web 管理面板: http://$WG_HOST:$UI_PORT"
-echo "WireGuard 监听端口: $WG_PORT/UDP"
-echo "配置文件目录: $DATA_DIR"
-echo "=========================================="
-
