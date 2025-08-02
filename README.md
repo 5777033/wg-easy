@@ -10,3 +10,8 @@
 ├── deploy-wg-easy.sh # 一键部署脚本
 ├── docker-compose.yml # 部署后自动生成
 └── wgeasy-data/ # WireGuard 配置数据持久化
+
+## 执行一键部署脚本
+```bash
+bash deploy-wg-easy.sh
+```
