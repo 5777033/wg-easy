@@ -15,3 +15,7 @@
 ```bash
 bash deploy-wg-easy.sh
 ```
+## 查看日志
+```bash
+docker-compose logs -f wg-easy
+```
